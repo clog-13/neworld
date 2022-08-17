@@ -395,7 +395,7 @@ private:
 
 我们前面在 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中已经知道，**像 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 这样具有无数变种的变量群，是“未索引的”。当读取这样的变量时，其实是它的“取处理程序”在起作用，即实时扫描当前请求的 URL 参数串，提取出变量名所指定的 URL 参数的值**。很多新手都会对 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 的实现方式产生误解，**以为 Nginx 会事先解析好当前请求的所有 URL 参数**，并且把相关的 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 变量的值都事先设置好。然而事实并非如此，Nginx 根本不会事先就解析好 URL 参数串，而是在用户读取某个 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 变量时，调用其“取处理程序”，即时去扫描 URL 参数串。**类似地，内建变量 [$cookie_XXX](http://wiki.nginx.org/HttpCoreModule#.24cookie_COOKIE) 也是通过它的“取处理程序”，即时去扫描 `Cookie` 请求头中的相关定义的**。
 
-### todo_Nginx 变量漫谈（四）
+### Nginx 变量漫谈（四）
 
 在设置了“取处理程序”的情况下，Nginx 变量也可以选择将其值容器用作缓存，这样在多次读取变量的时候，就只需要调用“取处理程序”计算一次。我们下面就来看一个这样的例子：
 
@@ -415,7 +415,9 @@ server {
 }
 ```
 
-这里用到了标准 [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块的 [map](http://wiki.nginx.org/HttpMapModule#map) 配置指令。`map` 在英文中除了“地图”之外，也有“映射”的意思。比方说，中学数学里讲的“函数”就是一种“映射”。 [map](http://wiki.nginx.org/HttpMapModule#map) 指令就可以用于定义两个 Nginx 变量之间的映射关系，或者说是函数关系。回到上面这个例子，我们用 [map](http://wiki.nginx.org/HttpMapModule#map) 指令定义了用户变量 `$foo` 与 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 内建变量之间的映射关系。特别地，用数学上的函数记法 `y = f(x)` 来说，我们的 `$args` 就是“自变量” `x`，而 `$foo` 则是“因变量” `y`，即 `$foo` 的值是由 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值来决定的，或者按照书写顺序可以说，我们将 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量的值映射到了 `$foo` 变量上。
+这里用到了标准 [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块的 [map](http://wiki.nginx.org/HttpMapModule#map) 配置指令。`map` 在英文中除了“地图”之外，也有“映射”的意思。比方说，中学数学里讲的“函数”就是一种“映射”。 [map](http://wiki.nginx.org/HttpMapModule#map) 指令就可以用于定义两个 Nginx 变量之间的映射关系，或者说是函数关系。
+
+上面这个例子，我们用 [map](http://wiki.nginx.org/HttpMapModule#map) 指令定义了用户变量 `$foo` 与 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 内建变量之间的映射关系。特别地，用数学上的函数记法 `y = f(x)` 来说，我们的 `$args` 就是“自变量” `x`，而 `$foo` 则是“因变量” `y`，即 `$foo` 的值是由 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值来决定的，或者按照书写顺序可以说，我们将 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量的值映射到了 `$foo` 变量上。
 
 现在我们再来看 [map](http://wiki.nginx.org/HttpMapModule#map) 指令定义的映射规则：
 
@@ -426,11 +428,9 @@ map $args $foo {
 }
 ```
 
-花括号中第一行的 `default` 是一个特殊的匹配条件，即当其他条件都不匹配的时候，这个条件才匹配。当这个默认条件匹配时，就把“因变量” `$foo` 映射到值 `0`. 而花括号中第二行的意思是说，如果“自变量” `$args` 精确匹配了 `debug` 这个字符串，则把“因变量” `$foo` 映射到值 `1`. 将这两行合起来，我们就得到如下完整的映射规则：当 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值等于 `debug` 的时候，`$foo` 变量的值就是 `1`，否则 `$foo` 的值就为 `0`.
+花括号中第一行的 `default` 是一个特殊的匹配条件，即当其他条件都不匹配的时候，这个条件才匹配。当这个默认条件匹配时，就把“因变量” `$foo` 映射到值 `0`. 而花括号中第二行的意思是说，如果“自变量” `$args` 精确匹配了 `debug` 这个字符串，则把“因变量” `$foo` 映射到值 `1`. 将这两行合起来，我们就得到如下完整的映射规则：**当 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值等于 `debug` 的时候，`$foo` 变量的值就是 `1`，否则 `$foo` 的值就为 `0`**。
 
-明白了 [map](http://wiki.nginx.org/HttpMapModule#map) 指令的含义，再来看 `location /test`. 在那里，我们先把当前 `$foo` 变量的值保存在另一个用户变量 `$orig_foo` 中，然后再强行把 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值改写为 `debug`，最后我们再用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令分别输出 `$orig_foo` 和 `$foo` 的值。
-
-从逻辑上看，似乎当我们强行改写 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值为 `debug` 之后，根据先前的 [map](http://wiki.nginx.org/HttpMapModule#map) 映射规则，`$foo` 变量此时的值应当自动调整为字符串 `1`, 而不论 `$foo` 原先的值是怎样的。然而测试结果并非如此：
+来看 `location /test`，我们先把当前 `$foo` 变量的值保存在另一个用户变量 `$orig_foo` 中，然后再强行把 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值改写为 `debug`，最后我们再用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令分别输出 `$orig_foo` 和 `$foo` 的值。从逻辑上看，似乎当我们强行改写 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值为 `debug` 之后，根据先前的 [map](http://wiki.nginx.org/HttpMapModule#map) 映射规则，`$foo` 变量此时的值应当自动调整为字符串 `1`, 而不论 `$foo` 原先的值是怎样的。**然而测试结果并非如此**：
 
 ```bash
 $ curl 'http://localhost:8080/test'
@@ -442,78 +442,116 @@ foo: 0
 
 而第二行输出显示，在强行改写 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量的值为字符串 `debug` 之后，`$foo` 的条件仍然是 `0` ，这显然不符合映射规则，因为当 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 为 `debug` 时，`$foo` 的值应当是 `1`. 这究竟是为什么呢？
 
-其实原因很简单，那就是 `$foo` 变量在第一次读取时，根据映射规则计算出的值被缓存住了。刚才我们说过，Nginx 模块可以为其创建的变量选择使用值容器，作为其“取处理程序”计算结果的缓存。显然， [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块认为变量间的映射计算足够昂贵，需要自动将因变量的计算结果缓存下来，这样在当前请求的处理过程中如果再次读取这个因变量，Nginx 就可以直接返回缓存住的结果，而不再调用该变量的“取处理程序”再行计算了。
+其实原因很简单，那就是 **`$foo` 变量在第一次读取时，根据映射规则计算出的值被缓存住了**。刚才我们说过，Nginx 模块可以为其创建的变量选择使用值容器，作为其“取处理程序”计算结果的缓存。显然， [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块认为变量间的映射计算足够昂贵，需要自动将因变量的计算结果缓存下来，这样**在当前请求的处理过程中如果再次读取这个因变量，Nginx 就可以直接返回缓存住的结果，而不再调用该变量的“取处理程序”再行计算了**。
 
 为了进一步验证这一点，我们不妨在请求中直接指定 URL 参数串为 `debug`:
 
-```
-  $ curl 'http://localhost:8080/test?debug'  original foo: 1  foo: 1
+```bash
+$ curl 'http://localhost:8080/test?debug'
+original foo: 1
+foo: 1
 ```
 
 我们看到，现在 `$orig_foo` 的值就成了 `1`，因为变量 `$foo` 在第一次被读取时，自变量 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值就是 `debug`，于是按照映射规则，“取处理程序”计算返回的值便是 `1`. 而后续再读取 `$foo` 的值时，就总是得到被缓存住的 `1` 这个结果，而不论 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 后来变成什么样了。
 
-[map](http://wiki.nginx.org/HttpMapModule#map) 指令其实是一个比较特殊的例子，因为它可以为用户变量注册“取处理程序”，而且用户可以自己定义这个“取处理程序”的计算规则。当然，此规则在这里被限定为与另一个变量的映射关系。同时，也并非所有使用了“取处理程序”的变量都会缓存结果，例如我们前面在 [（三）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables03) 中已经看到 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 并不会使用值容器进行缓存。
+[map](http://wiki.nginx.org/HttpMapModule#map) 指令其实是一个比较特殊的例子，因为它可以**为用户变量注册“取处理程序”，而且用户可以自己定义这个“取处理程序”的计算规则**。当然，此规则在这里被限定为与另一个变量的映射关系。同时，也并非所有使用了“取处理程序”的变量都会缓存结果，例如我们前面在 [（三）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables03) 中已经看到 **[$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 并不会使用值容器进行缓存**。
 
-类似 [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块，标准的 [ngx_geo](http://wiki.nginx.org/HttpGeoModule) 等模块也一样使用了变量值的缓存机制。
+**类似 [ngx_map](http://wiki.nginx.org/HttpMapModule) 模块，标准的 [ngx_geo](http://wiki.nginx.org/HttpGeoModule) 等模块也一样使用了变量值的缓存机制**。
 
-在上面的例子中，我们还应当注意到 [map](http://wiki.nginx.org/HttpMapModule#map) 指令是在 `server` 配置块之外，也就是在最外围的 `http` 配置块中定义的。很多读者可能会对此感到奇怪，毕竟我们只是在 `location /test` 中用到了它。这倒不是因为我们不想把 `map` 语句直接挪到 `location` 配置块中，而是因为 [map](http://wiki.nginx.org/HttpMapModule#map) 指令只能在 `http` 块中使用！
+在上面的例子中，我们还应当注意到 [map](http://wiki.nginx.org/HttpMapModule#map) 指令是在 `server` 配置块之外，也就是在最外围的 `http` 配置块中定义的。很多读者可能会对此感到奇怪，毕竟我们只是在 `location /test` 中用到了它。这倒不是因为我们不想把 `map` 语句直接挪到 `location` 配置块中，而是因为 **[map](http://wiki.nginx.org/HttpMapModule#map) 指令只能在 `http` 块中使用**！
 
-很多 Nginx 新手都会担心如此“全局”范围的 [map](http://wiki.nginx.org/HttpMapModule#map) 设置会让访问所有虚拟主机的所有 `location` 接口的请求都执行一遍变量值的映射计算，然而事实并非如此。前面我们已经了解到 [map](http://wiki.nginx.org/HttpMapModule#map) 配置指令的工作原理是为用户变量注册 “取处理程序”，并且实际的映射计算是在“取处理程序”中完成的，而“取处理程序”只有在该用户变量被实际读取时才会执行（当然，因为缓存的存在，只在请求生命期中的第一次读取中才被执行），所以对于那些根本没有用到相关变量的请求来说，就根本不会执行任何的无用计算。
+很多 Nginx 新手都会担心如此“全局”范围的 [map](http://wiki.nginx.org/HttpMapModule#map) 设置会让访问所有虚拟主机的所有 `location` 接口的请求都执行一遍变量值的映射计算，然而事实并非如此。前面我们已经了解到 [map](http://wiki.nginx.org/HttpMapModule#map) 配置指令的工作原理是为用户变量注册 “取处理程序”，并且实际的映射计算是在“取处理程序”中完成的，而“取处理程序”只有在该用户变量被实际读取时才会执行（当然，**因为缓存的存在，只在请求生命期中的第一次读取中才被执行**），所以对于那些根本没有用到相关变量的请求来说，就根本不会执行任何的无用计算。
 
 这种只在实际使用对象时才计算对象值的技术，在计算领域被称为“惰性求值”（lazy evaluation）。提供“惰性求值” 语义的编程语言并不多见，最经典的例子便是 Haskell. 与之相对的便是“主动求值” （eager evaluation）。我们有幸在 Nginx 中也看到了“惰性求值”的例子，但“主动求值”语义其实在 Nginx 里面更为常见，例如下面这行再普通不过的 [set](http://wiki.nginx.org/HttpRewriteModule#set) 语句：
 
+```nginx
+set $b "$a,$a";
 ```
-  set $b "$a,$a";
-```
 
-这里会在执行 [set](http://wiki.nginx.org/HttpRewriteModule#set) 规定的赋值操作时，“主动”地计算出变量 `$b` 的值，而不会将该求值计算延缓到变量 `$b` 实际被读取的时候。
+​	
 
-### Nginx 变量漫谈（五）
+### todo_Nginx 变量漫谈（五）
 
-前面在 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中我们已经了解到变量值容器的生命期是与请求绑定的，但是我当时有意避开了“请求”的正式定义。大家应当一直默认这里的“请求”都是指客户端发起的 HTTP 请求。其实在 Nginx 世界里有两种类型的“请求”，一种叫做“主请求”（main request），而另一种则叫做“子请求”（subrequest）。我们先来介绍一下它们。
+前面在 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中我们已经了解到变量值容器的生命期是与请求绑定的，但是我当时有意避开了“请求”的正式定义。大家应当一直默认这里的“请求”都是指客户端发起的 HTTP 请求。其实在 Nginx 世界里有两种类型的“请求”，一种叫做**“主请求”（main request）**，而另一种则叫做**“子请求”（subrequest）**。我们先来介绍一下它们。
 
-所谓“主请求”，就是由 HTTP 客户端从 Nginx 外部发起的请求。我们前面见到的所有例子都只涉及到“主请求”，包括 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中那两个使用 [echo_exec](http://wiki.nginx.org/HttpEchoModule#echo_exec) 和 [rewrite](http://wiki.nginx.org/HttpRewriteModule#rewrite) 指令发起“内部跳转”的例子。
+**所谓“主请求”，就是由 HTTP 客户端从 Nginx 外部发起的请求**。我们前面见到的所有例子都只涉及到“主请求”，包括 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中那两个使用 [echo_exec](http://wiki.nginx.org/HttpEchoModule#echo_exec) 和 [rewrite](http://wiki.nginx.org/HttpRewriteModule#rewrite) 指令发起“内部跳转”的例子。
 
 而“子请求”则是由 Nginx 正在处理的请求在 Nginx 内部发起的一种级联请求。“子请求”在外观上很像 HTTP 请求，但实现上却和 HTTP 协议乃至网络通信一点儿关系都没有。它是 Nginx 内部的一种抽象调用，目的是为了方便用户把“主请求”的任务分解为多个较小粒度的“内部请求”，并发或串行地访问多个 `location` 接口，然后由这些 `location` 接口通力协作，共同完成整个“主请求”。当然，“子请求”的概念是相对的，任何一个“子请求”也可以再发起更多的“子子请求”，甚至可以玩递归调用（即自己调用自己）。当一个请求发起一个“子请求”的时候，按照 Nginx 的术语，习惯把前者称为后者的“父请求”（parent request）。值得一提的是，Apache 服务器中其实也有“子请求”的概念，所以来自 Apache 世界的读者对此应当不会感到陌生。
 
 下面就来看一个使用了“子请求”的例子：
 
-```
-  location /main {    echo_location /foo;    echo_location /bar;  }  location /foo {    echo foo;  }  location /bar {    echo bar;  }
+```nginx
+location /main {
+    echo_location /foo;
+    echo_location /bar;
+}
+location /foo {
+    echo foo;
+}
+location /bar {
+    echo bar;
+}
 ```
 
 这里在 `location /main` 中，通过第三方 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 模块的 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令分别发起到 `/foo` 和 `/bar` 这两个接口的 `GET` 类型的“子请求”。由 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 发起的“子请求”，其执行是按照配置书写的顺序串行处理的，即只有当 `/foo` 请求处理完毕之后，才会接着处理 `/bar` 请求。这两个“子请求”的输出会按执行顺序拼接起来，作为 `/main` 接口的最终输出：
 
-```
-  $ curl 'http://localhost:8080/main'  foo  bar
+```bash
+$ curl 'http://localhost:8080/main'
+foo
+bar
 ```
 
 我们看到，“子请求”方式的通信是在同一个虚拟主机内部进行的，所以 Nginx 核心在实现“子请求”的时候，就只调用了若干个 C 函数，完全不涉及任何网络或者 UNIX 套接字（socket）通信。我们由此可以看出“子请求”的执行效率是极高的。
 
 回到先前对 Nginx 变量值容器的生命期的讨论，我们现在依旧可以说，它们的生命期是与当前请求相关联的。每个请求都有所有变量值容器的独立副本，只不过当前请求既可以是“主请求”，也可以是“子请求”。即便是父子请求之间，同名变量一般也不会相互干扰。让我们来通过一个小实验证明一下这个说法：
 
-```
-  location /main {    set $var main;    echo_location /foo;    echo_location /bar;    echo "main: $var";  }  location /foo {    set $var foo;    echo "foo: $var";  }  location /bar {    set $var bar;    echo "bar: $var";  }
+```nginx
+location /main {
+    set $var main;
+    echo_location /foo;
+    echo_location /bar;
+    echo "main: $var";
+}
+location /foo {
+    set $var foo;
+    echo "foo: $var";
+}
+location /bar {
+    set $var bar;
+    echo "bar: $var";
+}
 ```
 
 在这个例子中，我们分别在 `/main`，`/foo` 和 `/bar` 这三个 `location` 配置块中为同一名字的变量，`$var`，分别设置了不同的值并予以输出。特别地，我们在 `/main` 接口中，故意在调用过 `/foo` 和 `/bar` 这两个“子请求”之后，再输出它自己的 `$var` 变量的值。请求 `/main` 接口的结果是这样的：
 
-```
-  $ curl 'http://localhost:8080/main'  foo: foo  bar: bar  main: main
+```bash
+$ curl 'http://localhost:8080/main'
+foo: foo
+bar: bar
+main: main
 ```
 
 显然，`/foo` 和 `/bar` 这两个“子请求”在处理过程中对变量 `$var` 各自所做的修改都丝毫没有影响到“主请求” `/main`. 于是这成功印证了“主请求”以及各个“子请求”都拥有不同的变量 `$var` 的值容器副本。
 
 不幸的是，一些 Nginx 模块发起的“子请求”却会自动共享其“父请求”的变量值容器，比如第三方模块 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/). 下面是一个例子：
 
-```
-  location /main {    set $var main;    auth_request /sub;    echo "main: $var";  }  location /sub {    set $var sub;    echo "sub: $var";  }
+```nginx
+location /main {
+    set $var main;
+    auth_request /sub;
+    echo "main: $var";
+}
+location /sub {
+    set $var sub;
+    echo "sub: $var";
+}
 ```
 
 这里我们在 `/main` 接口中先为 `$var` 变量赋初值 `main`，然后使用 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块提供的配置指令 `auth_request`，发起一个到 `/sub` 接口的“子请求”，最后利用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令输出变量 `$var` 的值。而我们在 `/sub` 接口中则故意把 `$var` 变量的值改写成 `sub`. 访问 `/main` 接口的结果如下：
 
-```
-  $ curl 'http://localhost:8080/main'  main: sub
+```bash
+$ curl 'http://localhost:8080/main'
+main: sub
 ```
 
 我们看到，`/sub` 接口对 `$var` 变量值的修改影响到了主请求 `/main`. 所以 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块发起的“子请求”确实是与其“父请求”共享一套 Nginx 变量的值容器。
@@ -528,8 +566,14 @@ Nginx 内建变量用在“子请求”的上下文中时，其行为也会变�
 
 前面在 [（三）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables03) 中我们已经知道，许多内建变量都不是简单的“存放值的容器”，它们一般会通过注册“存取处理程序”来表现得与众不同，而它们即使有存放值的容器，也只是用于缓存“存取处理程序”的计算结果。我们之前讨论过的 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量正是通过它的“取处理程序”来返回当前请求的 URL 参数串。因为当前请求也可以是“子请求”，所以在“子请求”中读取 [$args](http://wiki.nginx.org/HttpCoreModule#.24args)，其“取处理程序”会很自然地返回当前“子请求”的参数串。我们来看这样的一个例子：
 
-```
-  location /main {    echo "main args: $args";    echo_location /sub "a=1&b=2";  }  location /sub {    echo "sub args: $args";  }
+```nginx
+location /main {
+    echo "main args: $args";
+    echo_location /sub "a=1&b=2";
+}
+location /sub {
+    echo "sub args: $args";
+}
 ```
 
 这里在 `/main` 接口中，先用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令输出当前请求的 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量的值，接着再用 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令发起子请求 `/sub`. 这里值得注意的是，我们在 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 语句中除了通过第一个参数指定“子请求”的 URI 之外，还提供了第二个参数，用以指定该“子请求”的 URL 参数串（即 `a=1&b=2`）。最后我们定义了 `/sub` 接口，在里面输出了一下 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值。请求 `/main` 接口的结果如下：
