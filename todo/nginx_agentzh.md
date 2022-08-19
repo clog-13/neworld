@@ -468,8 +468,6 @@ foo: 1
 set $b "$a,$a";
 ```
 
-​	
-
 ### todo_Nginx 变量漫谈（五）
 
 前面在 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中我们已经了解到变量值容器的生命期是与请求绑定的，但是我当时有意避开了“请求”的正式定义。大家应当一直默认这里的“请求”都是指客户端发起的 HTTP 请求。其实在 Nginx 世界里有两种类型的“请求”，一种叫做**“主请求”（main request）**，而另一种则叫做**“子请求”（subrequest）**。我们先来介绍一下它们。
@@ -1733,8 +1731,21 @@ Nginx “调试日志”可以再一次佐证我们的结论：
 
 不妨来看下面这个例子：
 
-```
-  root /var/www/;  location /test {    try_files /foo /bar/ /baz;    echo "uri: $uri";  }  location /foo {    echo foo;  }  location /bar/ {    echo bar;  }  location /baz {    echo baz;  }
+```nginx
+root /var/www/;
+location /test {
+    try_files /foo /bar/ /baz;
+    echo "uri: $uri";
+}
+location /foo {
+    echo foo;
+}
+location /bar/ {
+    echo bar;
+}
+location /baz {
+    echo baz;
+}
 ```
 
 这里通过 [root](http://wiki.nginx.org/HttpCoreModule#root) 指令把“文档根目录”配置为 `/var/www/`，如果你系统中的 `/var/www/` 路径下存放有重要数据，则可以把它替换为其他任意路径，但此路径对运行 Nginx worker 进程的系统帐号至少有可读权限。我们在 `location /test` 中使用了 [try_files](http://wiki.nginx.org/HttpCoreModule#try_files) 配置指令，并提供了三个参数，`/foo`、`/bar/` 和 `/baz`. 根据前面对 [try_files](http://wiki.nginx.org/HttpCoreModule#try_files) 指令的介绍，我们可以知道，它会在 `try-files` 阶段依次检查前两个参数 `/foo` 和 `/bar/` 所对应的文件系统对象是否存在。
@@ -1757,14 +1768,15 @@ Nginx “调试日志”可以再一次佐证我们的结论：
 
 接下来再做一组实验：在 `/var/www/` 下创建一个名为 `foo` 的文件，其内容为 `hello world`（注意你需要有 `/var/www/` 目录下的写权限）：
 
-```
-  $ echo 'hello world' > /var/www/foo
+```bash
+$ echo 'hello world' > /var/www/foo
 ```
 
 然后再请求 `/test` 接口：
 
-```
-  $ curl localhost:8080/test  uri: /foo
+```bash
+$ curl localhost:8080/test
+uri: /foo
 ```
 
 这里发生了什么？我们来看， [try_files](http://wiki.nginx.org/HttpCoreModule#try_files) 指令的第一个参数 `/foo` 可以映射为文件 `/var/www/foo`，而 Nginx 在 `try-files` 阶段发现此文件确实存在，于是立即把当前请求的 URI 改写为这个参数的值，即 `/foo`，并且不再继续检查后面的参数，而直接运行后面的请求处理阶段。

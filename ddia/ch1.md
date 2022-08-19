@@ -15,7 +15,7 @@
 
 本书将是一趟关于数据系统原理、实践与应用的旅程，并讲述了设计数据密集型应用的方法。我们将探索不同工具之间的共性与特性，以及各自的实现原理。
 
-本章将从我们所要实现的基础目标开始：可靠、可伸缩、可维护的数据系统。我们将澄清这些词语的含义，概述考量这些目标的方法。并回顾一些后续章节所需的基础知识。在接下来的章节中我们将抽丝剥茧，研究设计数据密集型应用时可能遇到的设计决策。
+本章将从我们所要实现的基础目标开始：可靠、可伸缩、可维护的数据系统。我们将澄清这些词语的含义，概述考量这些目标的方法。并在接下来的章节中我们将抽丝剥茧，研究设计数据密集型应用时可能遇到的设计决策。
 
 
 ## 关于数据系统的思考
@@ -24,13 +24,13 @@
 
 那我们为什么要把这些东西放在 **数据系统（data system）** 的总称之下混为一谈呢？
 
-近些年来，出现了许多新的数据存储工具与数据处理工具。它们针对不同应用场景进行优化，因此不再适合生硬地归入传统类别【1】。类别之间的界限变得越来越模糊，例如：数据存储可以被当成消息队列用（Redis），消息队列则带有类似数据库的持久保证（Apache Kafka）。
+近些年来，出现了许多新的数据存储工具与数据处理工具。它们针对不同应用场景进行优化，因此不再适合生硬地归入传统类别。类别之间的界限变得越来越模糊，例如：数据存储可以被当成消息队列用（Redis），消息队列则带有类似数据库的持久保证（Apache Kafka）。
 
 其次，越来越多的应用程序有着各种严格而广泛的要求，单个工具不足以满足所有的数据处理和存储需求。取而代之的是，总体工作被拆分成一系列能被单个工具高效完成的任务，并通过应用代码将它们缝合起来。
 
-例如，如果将缓存（应用管理的缓存层，Memcached 或同类产品）和全文搜索（全文搜索服务器，例如 Elasticsearch 或 Solr）功能从主数据库剥离出来，那么使缓存 / 索引与主数据库保持同步通常是应用代码的责任。[图 1-1](img/fig1-1.png) 给出了这种架构可能的样子（细节将在后面的章节中详细介绍）。
+例如，如果将缓存（应用管理的缓存层，Memcached 或同类产品）和全文搜索（全文搜索服务器，例如 Elasticsearch 或 Solr）功能从主数据库剥离出来，那么使缓存 / 索引与主数据库保持同步通常是应用代码的责任。下面给出了这种架构可能的样子：
 
-![](img/fig1-1.png)
+![](http://tva1.sinaimg.cn/large/006DIypxly1h5aprkchaaj31560tgdlg.jpg)
 
 **图 1-1 一个可能的组合使用多个组件的数据系统架构**
 
@@ -42,19 +42,17 @@
 
 本书着重讨论三个在大多数软件系统中都很重要的问题：
 
-* 可靠性（Reliability）
+* **可靠性（Reliability）**
 
-  系统在 **困境**（adversity，比如硬件故障、软件故障、人为错误）中仍可正常工作（正确完成功能，并能达到期望的性能水准）。请参阅 “[可靠性](#可靠性)”。
+  系统在 **困境**（adversity，比如硬件故障、软件故障、人为错误）中仍可正常工作（正确完成功能，并能达到期望的性能水准）。
 
-* 可伸缩性（Scalability）
+* **可伸缩性（Scalability）**
 
-  有合理的办法应对系统的增长（数据量、流量、复杂性）。请参阅 “[可伸缩性](#可伸缩性)”。
+  有合理的办法应对系统的增长（数据量、流量、复杂性）。
 
 * 可维护性（Maintainability）
 
-  许多不同的人（工程师、运维）在不同的生命周期，都能高效地在系统上工作（使系统保持现有行为，并适应新的应用场景）。请参阅 “[可维护性](#可维护性)”。
-
-人们经常追求这些词汇，却没有清楚理解它们到底意味着什么。为了工程的严谨性，本章的剩余部分将探讨可靠性、可伸缩性和可维护性的含义。为实现这些目标而使用的各种技术，架构和算法将在后续的章节中研究。
+  许多不同的人（工程师、运维）在不同的生命周期，都能高效地在系统上工作（使系统保持现有行为，并适应新的应用场景）。
 
 
 ## 可靠性
@@ -68,11 +66,11 @@
 
 如果所有这些在一起意味着 “正确工作”，那么可以把可靠性粗略理解为 “即使出现问题，也能继续正确工作”。
 
-造成错误的原因叫做 **故障（fault）**，能预料并应对故障的系统特性可称为 **容错（fault-tolerant）** 或 **韧性（resilient）**。“**容错**” 一词可能会产生误导，因为它暗示着系统可以容忍所有可能的错误，但在实际中这是不可能的。比方说，如果整个地球（及其上的所有服务器）都被黑洞吞噬了，想要容忍这种错误，需要把网络托管到太空中 —— 这种预算能不能批准就祝你好运了。所以在讨论容错时，只有谈论特定类型的错误才有意义。
+造成错误的原因叫做 **故障（fault）**，能预料并应对故障的系统特性可称为 **容错（fault-tolerant）** 或 **韧性（resilient）**。“**容错**” 一词可能会产生误导，因为它暗示着系统可以容忍所有可能的错误，但在实际中这是不可能的。比方说，如果整个地球（及其上的所有服务器）都被黑洞吞噬了，想要容忍这种错误，需要把网络托管到太空中 —— 这种预算能不能批准就祝你好运了。所以**在讨论容错时，只有谈论特定类型的错误才有意义。**
 
-注意 **故障（fault）** 不同于 **失效（failure）**【2】。**故障** 通常定义为系统的一部分状态偏离其标准，而 **失效** 则是系统作为一个整体停止向用户提供服务。故障的概率不可能降到零，因此最好设计容错机制以防因 **故障** 而导致 **失效**。本书中我们将介绍几种用不可靠的部件构建可靠系统的技术。
+注意 **故障（fault）** 不同于 **失效（failure）**。**故障通常定义为系统的一部分状态偏离其标准，而失效则是系统作为一个整体停止向用户提供服务**。故障的概率不可能降到零，因此最好设计容错机制以防因 **故障** 而导致 **失效**。本书中我们将介绍几种用不可靠的部件构建可靠系统的技术。
 
-反直觉的是，在这类容错系统中，通过故意触发来 **提高** 故障率是有意义的，例如：在没有警告的情况下随机地杀死单个进程。许多高危漏洞实际上是由糟糕的错误处理导致的【3】，因此我们可以通过故意引发故障来确保容错机制不断运行并接受考验，从而提高故障自然发生时系统能正确处理的信心。Netflix 公司的 *Chaos Monkey*【4】就是这种方法的一个例子。
+反直觉的是，在这类容错系统中，**通过故意触发来提高故障率是有意义的**，例如：在没有警告的情况下随机地杀死单个进程。许多高危漏洞实际上是由糟糕的错误处理导致的，因此我们可以通过故意引发故障来确保容错机制不断运行并接受考验，从而提高故障自然发生时系统能正确处理的信心。Netflix 公司的 *Chaos Monkey*就是这种方法的一个例子。
 
 尽管比起 **阻止错误（prevent error）**，我们通常更倾向于 **容忍错误**。但也有 **预防胜于治疗** 的情况（比如不存在治疗方法时）。安全问题就属于这种情况。例如，如果攻击者破坏了系统，并获取了敏感数据，这种事是撤销不了的。但本书主要讨论的是可以恢复的故障种类，正如下面几节所述。
 
@@ -80,51 +78,49 @@
 
 当想到系统失效的原因时，**硬件故障（hardware faults）** 总会第一个进入脑海。硬盘崩溃、内存出错、机房断电、有人拔错网线…… 任何与大型数据中心打过交道的人都会告诉你：一旦你拥有很多机器，这些事情 **总** 会发生！
 
-据报道称，硬盘的 **平均无故障时间（MTTF, mean time to failure）** 约为 10 到 50 年【5】【6】。因此从数学期望上讲，在拥有 10000 个磁盘的存储集群上，平均每天会有 1 个磁盘出故障。
+据报道称，硬盘的 **平均无故障时间（MTTF, mean time to failure）** 约为 10 到 50 年。因此从数学期望上讲，在拥有 10000 个磁盘的存储集群上，平均每天会有 1 个磁盘出故障。
 
 为了减少系统的故障率，第一反应通常都是增加单个硬件的冗余度，例如：磁盘可以组建 RAID，服务器可能有双路电源和热插拔 CPU，数据中心可能有电池和柴油发电机作为后备电源，某个组件挂掉时冗余组件可以立刻接管。这种方法虽然不能完全防止由硬件问题导致的系统失效，但它简单易懂，通常也足以让机器不间断运行很多年。
 
 直到最近，硬件冗余对于大多数应用来说已经足够了，它使单台机器完全失效变得相当罕见。只要你能快速地把备份恢复到新机器上，故障停机时间对大多数应用而言都算不上灾难性的。只有少量高可用性至关重要的应用才会要求有多套硬件冗余。
 
-但是随着数据量和应用计算需求的增加，越来越多的应用开始大量使用机器，这会相应地增加硬件故障率。此外，在类似亚马逊 AWS（Amazon Web Services）的一些云服务平台上，虚拟机实例不可用却没有任何警告也是很常见的【7】，因为云平台的设计就是优先考虑 **灵活性（flexibility）** 和 **弹性（elasticity）**[^i]，而不是单机可靠性。
+但是随着数据量和应用计算需求的增加，越来越多的应用开始大量使用机器，这会相应地增加硬件故障率。此外，**在类似亚马逊 AWS（Amazon Web Services）的一些云服务平台上，虚拟机实例不可用却没有任何警告也是很常见的**，因为云平台的设计就是优先考虑 **灵活性（flexibility）** 和 **弹性（elasticity）**，而不是单机可靠性。
 
 如果在硬件冗余的基础上进一步引入软件容错机制，那么系统在容忍整个（单台）机器故障的道路上就更进一步了。这样的系统也有运维上的便利，例如：如果需要重启机器（例如应用操作系统安全补丁），单服务器系统就需要计划停机。而允许机器失效的系统则可以一次修复一个节点，无需整个系统停机。
 
-[^i]: 在 [应对负载的方法](#应对负载的方法) 一节定义
-
 ### 软件错误
 
-我们通常认为硬件故障是随机的、相互独立的：一台机器的磁盘失效并不意味着另一台机器的磁盘也会失效。虽然大量硬件组件之间可能存在微弱的相关性（例如服务器机架的温度等共同的原因），但同时发生故障也是极为罕见的。
+**我们通常认为硬件故障是随机的、相互独立的**：一台机器的磁盘失效并不意味着另一台机器的磁盘也会失效。虽然大量硬件组件之间可能存在微弱的相关性（例如服务器机架的温度等共同的原因），但同时发生故障也是极为罕见的。
 
-另一类错误是内部的 **系统性错误（systematic error）**【8】。这类错误难以预料，而且因为是跨节点相关的，所以比起不相关的硬件故障往往可能造成更多的 **系统失效**【5】。例子包括：
+另一类错误是内部的 **系统性错误（systematic error）**。这类错误难以预料，而且因为是跨节点相关的，所以比起不相关的硬件故障往往可能造成更多的 **系统失效**。例子包括：
 
-* 接受特定的错误输入，便导致所有应用服务器实例崩溃的 BUG。例如 2012 年 6 月 30 日的闰秒，由于 Linux 内核中的一个错误【9】，许多应用同时挂掉了。
-* 失控进程会用尽一些共享资源，包括 CPU 时间、内存、磁盘空间或网络带宽。
-* 系统依赖的服务变慢，没有响应，或者开始返回错误的响应。
-* 级联故障，一个组件中的小故障触发另一个组件中的故障，进而触发更多的故障【10】。
+* **接受特定的错误输入**，便导致所有应用服务器实例崩溃的 BUG。例如 2012 年 6 月 30 日的闰秒，由于 Linux 内核中的一个错误，许多应用同时挂掉了。
+* **失控进程会用尽一些共享资源**，包括 CPU 时间、内存、磁盘空间或网络带宽。
+* **系统依赖的服务变慢**，没有响应，或者开始返回错误的响应。
+* **级联故障**，一个组件中的小故障触发另一个组件中的故障，进而触发更多的故障。
 
-导致这类软件故障的 BUG 通常会潜伏很长时间，直到被异常情况触发为止。这种情况意味着软件对其环境做出了某种假设 —— 虽然这种假设通常来说是正确的，但由于某种原因最后不再成立了【11】。
+导致这类软件故障的 BUG 通常会潜伏很长时间，直到被异常情况触发为止。这种情况意味着软件对其环境做出了某种假设 —— 虽然这种假设通常来说是正确的，但由于某种原因最后不再成立了。
 
-虽然软件中的系统性故障没有速效药，但我们还是有很多小办法，例如：仔细考虑系统中的假设和交互；彻底的测试；进程隔离；允许进程崩溃并重启；测量、监控并分析生产环境中的系统行为。如果系统能够提供一些保证（例如在一个消息队列中，进入与发出的消息数量相等），那么系统就可以在运行时不断自检，并在出现 **差异（discrepancy）** 时报警【12】。
+虽然软件中的系统性故障没有速效药，但我们还是有很多小办法，例如：**仔细考虑系统中的假设和交互**；**彻底的测试**；**进程隔离**；**允许进程崩溃并重启**；**测量、监控并分析生产环境中的系统行为**。如果系统能够**提供一些保证**（例如在一个消息队列中，进入与发出的消息数量相等），那么系统就可以在运行时不断自检，并在出现 **差异（discrepancy）** 时报警。
 
 ### 人为错误
 
-设计并构建了软件系统的工程师是人类，维持系统运行的运维也是人类。即使他们怀有最大的善意，人类也是不可靠的。举个例子，一项关于大型互联网服务的研究发现，运维配置错误是导致服务中断的首要原因，而硬件故障（服务器或网络）仅导致了 10-25% 的服务中断【13】。
+设计并构建了软件系统的工程师是人类，维持系统运行的运维也是人类。即使他们怀有最大的善意，人类也是不可靠的。举个例子，一项关于大型互联网服务的研究发现，运维配置错误是导致服务中断的首要原因，而硬件故障（服务器或网络）仅导致了 10-25% 的服务中断。
 
 尽管人类不可靠，但怎么做才能让系统变得可靠？最好的系统会组合使用以下几种办法：
 
-* 以最小化犯错机会的方式设计系统。例如，精心设计的抽象、API 和管理后台使做对事情更容易，搞砸事情更困难。但如果接口限制太多，人们就会忽略它们的好处而想办法绕开。很难正确把握这种微妙的平衡。
-* 将人们最容易犯错的地方与可能导致失效的地方 **解耦（decouple）**。特别是提供一个功能齐全的非生产环境 **沙箱（sandbox）**，使人们可以在不影响真实用户的情况下，使用真实数据安全地探索和实验。
-* 在各个层次进行彻底的测试【3】，从单元测试、全系统集成测试到手动测试。自动化测试易于理解，已经被广泛使用，特别适合用来覆盖正常情况中少见的 **边缘场景（corner case）**。
-* 允许从人为错误中简单快速地恢复，以最大限度地减少失效情况带来的影响。 例如，快速回滚配置变更，分批发布新代码（以便任何意外错误只影响一小部分用户），并提供数据重算工具（以备旧的计算出错）。
-* 配置详细和明确的监控，比如性能指标和错误率。 在其他工程学科中这指的是 **遥测（telemetry）**（一旦火箭离开了地面，遥测技术对于跟踪发生的事情和理解失败是至关重要的）。监控可以向我们发出预警信号，并允许我们检查是否有任何地方违反了假设和约束。当出现问题时，指标数据对于问题诊断是非常宝贵的。
-* 良好的管理实践与充分的培训 —— 一个复杂而重要的方面，但超出了本书的范围。
+* **以最小化犯错机会的方式设计系统**。例如，精心设计的抽象、API 和管理后台使做对事情更容易，搞砸事情更困难。但如果接口限制太多，人们就会忽略它们的好处而想办法绕开。很难正确把握这种微妙的平衡。
+* 将人们最**容易犯错**的地方与**可能导致失效**的地方 **解耦（decouple）**。特别是提供一个功能齐全的非生产环境 **沙箱（sandbox）**，使人们可以在不影响真实用户的情况下，使用真实数据安全地探索和实验。
+* 在各个层次进行彻底的测试，从单元测试、全系统集成测试到手动测试。自动化测试易于理解，已经被广泛使用，特别适合用来覆盖正常情况中少见的 **边缘场景（corner case）**。
+* 允许从人为错误中**简单快速地恢复**，以最大限度地减少失效情况带来的影响。 例如，快速回滚配置变更，分批发布新代码（以便任何意外错误只影响一小部分用户），并提供数据重算工具（以备旧的计算出错）。
+* **配置详细和明确的监控，比如性能指标和错误率**。 在其他工程学科中这指的是 **遥测（telemetry）**（一旦火箭离开了地面，遥测技术对于跟踪发生的事情和理解失败是至关重要的）。监控可以向我们发出预警信号，并允许我们检查是否有任何地方违反了假设和约束。当出现问题时，指标数据对于问题诊断是非常宝贵的。
+* **良好的管理实践与充分的培训** —— 一个复杂而重要的方面，但超出了本书的范围。
 
 ### 可靠性有多重要？
 
 可靠性不仅仅是针对核电站和空中交通管制软件而言，我们也期望更多平凡的应用能可靠地运行。商务应用中的错误会导致生产力损失（也许数据报告不完整还会有法律风险），而电商网站的中断则可能会导致收入和声誉的巨大损失。
 
-即使在 “非关键” 应用中，我们也对用户负有责任。试想一位家长把所有的照片和孩子的视频储存在你的照片应用里【15】。如果数据库突然损坏，他们会感觉如何？他们可能会知道如何从备份恢复吗？
+**即使在 “非关键” 应用中，我们也对用户负有责任**。试想一位家长把所有的照片和孩子的视频储存在你的照片应用里。如果数据库突然损坏，他们会感觉如何？他们可能会知道如何从备份恢复吗？
 
 在某些情况下，我们可能会选择牺牲可靠性来降低开发成本（例如为未经证实的市场开发产品原型）或运营成本（例如利润率极低的服务），但我们偷工减料时，应该清楚意识到自己在做什么。
 
@@ -133,29 +129,26 @@
 
 系统今天能可靠运行，并不意味未来也能可靠运行。服务 **降级（degradation）** 的一个常见原因是负载增加，例如：系统负载已经从一万个并发用户增长到十万个并发用户，或者从一百万增长到一千万。也许现在处理的数据量级要比过去大得多。
 
-**可伸缩性（Scalability）** 是用来描述系统应对负载增长能力的术语。但是请注意，这不是贴在系统上的一维标签：说 “X 可伸缩” 或 “Y 不可伸缩” 是没有任何意义的。相反，讨论可伸缩性意味着考虑诸如 “如果系统以特定方式增长，有什么选项可以应对增长？” 和 “如何增加计算资源来处理额外的负载？” 等问题。
+**可伸缩性（Scalability）** 是用来描述系统应对负载增长能力的术语。但是请注意，这不是贴在系统上的一维标签：说 “X 可伸缩” 或 “Y 不可伸缩” 是没有任何意义的。相反，讨论可伸缩性意味着考虑诸如 “**如果系统以特定方式增长，有什么选项可以应对增长？**” 和 “**如何增加计算资源来处理额外的负载？**” 等问题。
 
 ### 描述负载
 
 在讨论增长问题（如果负载加倍会发生什么？）前，首先要能简要描述系统的当前负载。负载可以用一些称为 **负载参数（load parameters）** 的数字来描述。参数的最佳选择取决于系统架构，它可能是每秒向 Web 服务器发出的请求、数据库中的读写比率、聊天室中同时活跃的用户数量、缓存命中率或其他东西。除此之外，也许平均情况对你很重要，也许你的瓶颈是少数极端场景。
 
-为了使这个概念更加具体，我们以推特在 2012 年 11 月发布的数据【16】为例。推特的两个主要业务是：
+为了使这个概念更加具体，我们以推特在 2012 年 11 月发布的数据为例。推特的两个主要业务是：
 
-* 发布推文
+* 发布推文：用户可以向其粉丝发布新消息（平均 4.6k 请求 / 秒，峰值超过 12k 请求 / 秒）。
 
-  用户可以向其粉丝发布新消息（平均 4.6k 请求 / 秒，峰值超过 12k 请求 / 秒）。
+* 主页时间线：用户可以查阅他们关注的人发布的推文（300k 请求 / 秒）。
 
-* 主页时间线
 
-  用户可以查阅他们关注的人发布的推文（300k 请求 / 秒）。
+处理每秒 12,000 次写入（发推文的速率峰值）还是很简单的。然而推特的伸缩性挑战并不是主要来自推特量，而是来自 **扇出（fan-out）**—— 每个用户关注了很多人，也被很多人关注。
 
-处理每秒 12,000 次写入（发推文的速率峰值）还是很简单的。然而推特的伸缩性挑战并不是主要来自推特量，而是来自 **扇出（fan-out）**[^ii]—— 每个用户关注了很多人，也被很多人关注。
-
-[^ii]: 扇出：从电子工程学中借用的术语，它描述了输入连接到另一个门输出的逻辑门数量。 输出需要提供足够的电流来驱动所有连接的输入。 在事务处理系统中，我们使用它来描述为了服务一个传入请求而需要执行其他服务的请求数量。
+> 扇出：从电子工程学中借用的术语，它描述了输入连接到另一个门输出的逻辑门数量。 输出需要提供足够的电流来驱动所有连接的输入。 在事务处理系统中，我们使用它来描述为了服务一个传入请求而需要执行其他服务的请求数量。
 
 大体上讲，这一对操作有两种实现方式。
 
-1. 发布推文时，只需将新推文插入全局推文集合即可。当一个用户请求自己的主页时间线时，首先查找他关注的所有人，查询这些被关注用户发布的推文并按时间顺序合并。在如 [图 1-2](img/fig1-2.png) 所示的关系型数据库中，可以编写这样的查询：
+1. 发布推文时，只需将新推文插入全局推文集合即可。当一个用户请求自己的主页时间线时，首先查找他关注的所有人，查询这些被关注用户发布的推文并按时间顺序合并。在如 图1-2 所示的关系型数据库中，可以编写这样的查询：
 
     ```sql
     SELECT tweets.*, users.*
@@ -164,23 +157,23 @@
       JOIN follows ON follows.followee_id = users.id
       WHERE follows.follower_id = current_user
     ```
-    ![](img/fig1-2.png)
+    ![](https://tva1.sinaimg.cn/large/006DIypxly1h5arutq75vj314w0fk77n.jpg)
 
     **图 1-2 推特主页时间线的关系型模式简单实现**
 
-2. 为每个用户的主页时间线维护一个缓存，就像每个用户的推文收件箱（[图 1-3](img/fig1-3.png)）。 当一个用户发布推文时，查找所有关注该用户的人，并将新的推文插入到每个主页时间线缓存中。 因此读取主页时间线的请求开销很小，因为结果已经提前计算好了。
+2. 为每个用户的主页时间线维护一个缓存，就像每个用户的推文收件箱（图1-3）。 当一个用户发布推文时，查找所有关注该用户的人，并将新的推文插入到每个主页时间线缓存中。 因此读取主页时间线的请求开销很小，因为结果已经提前计算好了。
 
-    ![](img/fig1-3.png)
+    ![](https://tva1.sinaimg.cn/large/006DIypxly1h5arvellvfj31540fkn0z.jpg)
 
     **图 1-3 用于分发推特至关注者的数据流水线，2012 年 11 月的负载参数【16】**
 
-推特的第一个版本使用了方法 1，但系统很难跟上主页时间线查询的负载。所以公司转向了方法 2，方法 2 的效果更好，因为发推频率比查询主页时间线的频率几乎低了两个数量级，所以在这种情况下，最好在写入时做更多的工作，而在读取时做更少的工作。
+推特的第一个版本使用了方法 1，但系统很难跟上主页时间线查询的负载。所以公司转向了方法 2，方法 2 的效果更好，**因为发推频率比查询主页时间线的频率几乎低了两个数量级**，所以在这种情况下，最好在写入时做更多的工作，而在读取时做更少的工作。
 
-然而方法 2 的缺点是，发推现在需要大量的额外工作。平均来说，一条推文会发往约 75 个关注者，所以每秒 4.6k 的发推写入，变成了对主页时间线缓存每秒 345k 的写入。但这个平均值隐藏了用户粉丝数差异巨大这一现实，一些用户有超过 3000 万的粉丝，这意味着一条推文就可能会导致主页时间线缓存的 3000 万次写入！及时完成这种操作是一个巨大的挑战 —— 推特尝试在 5 秒内向粉丝发送推文。
+**然而方法 2 的缺点是，发推现在需要大量的额外工作**。平均来说，一条推文会发往约 75 个关注者，所以每秒 4.6k 的发推写入，变成了对主页时间线缓存每秒 345k 的写入。但这个平均值隐藏了用户粉丝数差异巨大这一现实，一些用户有超过 3000 万的粉丝，这意味着一条推文就可能会导致主页时间线缓存的 3000 万次写入！
 
 在推特的例子中，每个用户粉丝数的分布（可能按这些用户的发推频率来加权）是探讨可伸缩性的一个关键负载参数，因为它决定了扇出负载。你的应用程序可能具有非常不同的特征，但可以采用相似的原则来考虑它的负载。
 
-推特轶事的最终转折：现在已经稳健地实现了方法 2，推特逐步转向了两种方法的混合。大多数用户发的推文会被扇出写入其粉丝主页时间线缓存中。但是少数拥有海量粉丝的用户（即名流）会被排除在外。当用户读取主页时间线时，分别地获取出该用户所关注的每位名流的推文，再与用户的主页时间线缓存合并，如方法 1 所示。这种混合方法能始终如一地提供良好性能。在 [第十二章](ch12.md) 中我们将重新讨论这个例子，这在覆盖更多技术层面之后。
+推特轶事的最终转折：现在已经稳健地实现了方法 2，推特逐步转向了**两种方法的混合**。大多数用户发的推文会被扇出写入其粉丝主页时间线缓存中。**但是少数拥有海量粉丝的用户（即名流）会被排除在外**。当用户读取主页时间线时，分别地获取出该用户所关注的每位名流的推文，再与用户的主页时间线缓存合并，如方法 1 所示。这种混合方法能始终如一地提供良好性能。
 
 ### 描述性能
 
@@ -314,7 +307,7 @@
 
 小型软件项目可以使用简单讨喜的、富表现力的代码，但随着项目越来越大，代码往往变得非常复杂，难以理解。这种复杂度拖慢了所有系统相关人员，进一步增加了维护成本。一个陷入复杂泥潭的软件项目有时被描述为 **烂泥潭（a big ball of mud）** 【30】。
 
-**复杂度（complexity）** 有各种可能的症状，例如：状态空间激增、模块间紧密耦合、纠结的依赖关系、不一致的命名和术语、解决性能问题的 Hack、需要绕开的特例等等，现在已经有很多关于这个话题的讨论【31,32,33】。
+**复杂度（complexity）** 有各种可能的症状，例如：状态空间激增、模块间紧密耦合、纠结的依赖关系、不一致的命名和术语、解决性能问题的 Hack、需要绕开的特例等等，现在已经有很多关于这个话题的讨论。
 
 因为复杂度导致维护困难时，预算和时间安排通常会超支。在复杂的软件中进行变更，引入错误的风险也更大：当开发人员难以理解系统时，隐藏的假设、无意的后果和意外的交互就更容易被忽略。相反，降低复杂度能极大地提高软件的可维护性，因此简单性应该是构建系统的一个关键目标。
 
@@ -345,7 +338,6 @@
 
 一个应用必须满足各种需求才称得上有用。有一些 **功能需求**（functional requirements，即它应该做什么，比如允许以各种方式存储，检索，搜索和处理数据）以及一些 **非功能性需求**（nonfunctional，即通用属性，例如安全性、可靠性、合规性、可伸缩性、兼容性和可维护性）。在本章详细讨论了可靠性，可伸缩性和可维护性。
 
-
 **可靠性（Reliability）** 意味着即使发生故障，系统也能正常工作。故障可能发生在硬件（通常是随机的和不相关的）、软件（通常是系统性的 Bug，很难处理）和人类（不可避免地时不时出错）。 **容错技术** 可以对终端用户隐藏某些类型的故障。
 
 **可伸缩性（Scalability）** 意味着即使在负载增加的情况下也有保持性能的策略。为了讨论可伸缩性，我们首先需要定量描述负载和性能的方法。我们简要了解了推特主页时间线的例子，介绍描述负载的方法，并将响应时间百分位点作为衡量性能的一种方式。在可伸缩的系统中可以添加 **处理容量（processing capacity）** 以在高负载下保持可靠。
@@ -354,49 +346,4 @@
 
 不幸的是，使应用可靠、可伸缩或可维护并不容易。但是某些模式和技术会不断重新出现在不同的应用中。在接下来的几章中，我们将看到一些数据系统的例子，并分析它们如何实现这些目标。
 
-在本书后面的 [第三部分](part-iii.md) 中，我们将看到一种模式：几个组件协同工作以构成一个完整的系统（如 [图 1-1](img/fig1-1.png) 中的例子）
-
-
-## 参考文献
-
-1.  Michael Stonebraker and Uğur Çetintemel: “['One Size Fits All': An Idea Whose Time Has Come and Gone](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.68.9136&rep=rep1&type=pdf),” at *21st International Conference on Data Engineering* (ICDE), April 2005.
-1.  Walter L. Heimerdinger and Charles B. Weinstock: “[A Conceptual Framework for System Fault Tolerance](http://www.sei.cmu.edu/reports/92tr033.pdf),” Technical Report CMU/SEI-92-TR-033, Software Engineering Institute, Carnegie Mellon University, October 1992.
-1.  Ding Yuan, Yu Luo, Xin Zhuang, et al.: “[Simple Testing Can Prevent Most Critical Failures: An Analysis of Production Failures in Distributed Data-Intensive Systems](https://www.usenix.org/system/files/conference/osdi14/osdi14-paper-yuan.pdf),” at *11th USENIX Symposium on Operating Systems Design and Implementation* (OSDI), October 2014.
-1.  Yury Izrailevsky and Ariel Tseitlin: “[The Netflix Simian Army](http://techblog.netflix.com/2011/07/netflix-simian-army.html),” *techblog.netflix.com*, July 19, 2011.
-1.  Daniel Ford, François Labelle, Florentina I. Popovici, et al.: “[Availability in Globally Distributed Storage Systems](http://research.google.com/pubs/archive/36737.pdf),” at *9th USENIX Symposium on Operating Systems Design and Implementation* (OSDI), October 2010.
-1.  Brian Beach: “[Hard Drive Reliability Update – Sep 2014](https://www.backblaze.com/blog/hard-drive-reliability-update-september-2014/),” *backblaze.com*, September 23, 2014.
-1.  Laurie Voss: “[AWS: The Good, the Bad and the Ugly](https://web.archive.org/web/20160429075023/http://blog.awe.sm/2012/12/18/aws-the-good-the-bad-and-the-ugly/),” *blog.awe.sm*, December 18, 2012.
-1.  Haryadi S. Gunawi, Mingzhe Hao, Tanakorn Leesatapornwongsa, et al.: “[What Bugs Live in the Cloud?](http://ucare.cs.uchicago.edu/pdf/socc14-cbs.pdf),” at *5th ACM Symposium on Cloud Computing* (SoCC), November 2014. [doi:10.1145/2670979.2670986](http://dx.doi.org/10.1145/2670979.2670986)
-1.  Nelson Minar:  “[Leap Second Crashes Half the Internet](http://www.somebits.com/weblog/tech/bad/leap-second-2012.html),” *somebits.com*, July 3, 2012.
-1.  Amazon Web Services:  “[Summary of the Amazon EC2 and Amazon RDS Service Disruption in the US East Region](http://aws.amazon.com/message/65648/),” *aws.amazon.com*, April 29, 2011.
-1.  Richard I. Cook: “[How Complex Systems Fail](http://web.mit.edu/2.75/resources/random/How%20Complex%20Systems%20Fail.pdf),” Cognitive Technologies Laboratory, April 2000.
-1.  Jay Kreps: “[Getting Real About Distributed System Reliability](http://blog.empathybox.com/post/19574936361/getting-real-about-distributed-system-reliability),” *blog.empathybox.com*, March 19, 2012.
-1.  David Oppenheimer, Archana Ganapathi, and David A. Patterson: “[Why Do Internet Services Fail, and What Can Be Done About It?](http://static.usenix.org/legacy/events/usits03/tech/full_papers/oppenheimer/oppenheimer.pdf),” at *4th USENIX Symposium on Internet Technologies and Systems* (USITS), March 2003.
-1.  Nathan Marz:  “[Principles of Software Engineering, Part 1](http://nathanmarz.com/blog/principles-of-software-engineering-part-1.html),” *nathanmarz.com*, April 2, 2013.
-1.  Michael Jurewitz:“[The Human Impact of Bugs](http://jury.me/blog/2013/3/14/the-human-impact-of-bugs),” *jury.me*, March 15, 2013.
-1.  Raffi Krikorian: “[Timelines at Scale](http://www.infoq.com/presentations/Twitter-Timeline-Scalability),” at *QCon San Francisco*, November 2012.
-1.  Martin Fowler: *Patterns of Enterprise Application Architecture*. Addison Wesley, 2002. ISBN: 978-0-321-12742-6
-1.  Kelly Sommers: “[After all that run around, what caused 500ms disk latency even when we replaced physical server?](https://twitter.com/kellabyte/status/532930540777635840)” *twitter.com*, November 13, 2014.
-1.  Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, et al.: “[Dynamo: Amazon's Highly Available Key-Value Store](http://www.allthingsdistributed.com/files/amazon-dynamo-sosp2007.pdf),” at *21st ACM Symposium on Operating Systems Principles* (SOSP), October 2007.
-1.  Greg Linden: “[Make Data Useful](http://glinden.blogspot.co.uk/2006/12/slides-from-my-talk-at-stanford.html),” slides from presentation at Stanford University Data Mining class (CS345), December 2006.
-1.  Tammy Everts: “[The Real Cost of Slow Time vs Downtime](http://www.webperformancetoday.com/2014/11/12/real-cost-slow-time-vs-downtime-slides/),” *webperformancetoday.com*, November 12, 2014.
-1.  Jake Brutlag:“[Speed Matters for Google Web Search](http://googleresearch.blogspot.co.uk/2009/06/speed-matters.html),” *googleresearch.blogspot.co.uk*, June 22, 2009.
-1.  Tyler Treat: “[Everything You Know About Latency Is Wrong](http://bravenewgeek.com/everything-you-know-about-latency-is-wrong/),” *bravenewgeek.com*, December 12, 2015.
-1.  Jeffrey Dean and Luiz André Barroso: “[The Tail at Scale](http://cacm.acm.org/magazines/2013/2/160173-the-tail-at-scale/fulltext),” *Communications of the ACM*, volume 56, number 2, pages 74–80, February 2013. [doi:10.1145/2408776.2408794](http://dx.doi.org/10.1145/2408776.2408794)
-1.  Graham Cormode, Vladislav Shkapenyuk, Divesh Srivastava, and Bojian Xu: “[Forward Decay: A Practical Time Decay Model for Streaming Systems](http://dimacs.rutgers.edu/~graham/pubs/papers/fwddecay.pdf),” at *25th IEEE International Conference on Data Engineering* (ICDE), March 2009.
-1.  Ted Dunning and Otmar Ertl: “[Computing Extremely Accurate Quantiles Using t-Digests](https://github.com/tdunning/t-digest),” *github.com*, March 2014.
-1.  Gil Tene: “[HdrHistogram](http://www.hdrhistogram.org/),” *hdrhistogram.org*.
-1.  Baron Schwartz: “[Why Percentiles Don’t Work the Way You Think](https://www.vividcortex.com/blog/why-percentiles-dont-work-the-way-you-think),” *vividcortex.com*, December 7, 2015.
-1.  James Hamilton: “[On Designing and Deploying Internet-Scale Services](https://www.usenix.org/legacy/events/lisa07/tech/full_papers/hamilton/hamilton.pdf),” at *21st Large Installation System Administration Conference* (LISA), November 2007.
-1.  Brian Foote and Joseph Yoder: “[Big Ball of Mud](http://www.laputan.org/pub/foote/mud.pdf),” at *4th Conference on Pattern Languages of Programs* (PLoP), September 1997.
-1.  Frederick P Brooks: “No Silver Bullet – Essence and Accident in Software Engineering,” in *The Mythical Man-Month*, Anniversary edition, Addison-Wesley, 1995. ISBN: 978-0-201-83595-3
-1.  Ben Moseley and Peter Marks: “[Out of the Tar Pit](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.93.8928),” at *BCS Software Practice Advancement* (SPA), 2006.
-1.  Rich Hickey: “[Simple Made Easy](http://www.infoq.com/presentations/Simple-Made-Easy),” at *Strange Loop*, September 2011.
-1.  Hongyu Pei Breivold, Ivica Crnkovic, and Peter J. Eriksson: “[Analyzing Software Evolvability](http://www.mrtc.mdh.se/publications/1478.pdf),” at *32nd Annual IEEE International Computer Software and Applications Conference* (COMPSAC), July 2008. [doi:10.1109/COMPSAC.2008.50](http://dx.doi.org/10.1109/COMPSAC.2008.50)
-
-
-------
-
-| 上一章                              | 目录                            | 下一章                               |
-| ----------------------------------- | ------------------------------- | ------------------------------------ |
-| [第一部分：数据系统基础](part-i.md) | [设计数据密集型应用](README.md) | [第二章：数据模型与查询语言](ch2.md) |
+在本书后面的 第三部分 中，我们将看到一种模式：几个组件协同工作以构成一个完整的系统（如 图1-1 中的例子）
