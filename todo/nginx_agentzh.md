@@ -468,13 +468,13 @@ foo: 1
 set $b "$a,$a";
 ```
 
-### todo_Nginx 变量漫谈（五）
+### Nginx 变量漫谈（五）
 
-前面在 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中我们已经了解到变量值容器的生命期是与请求绑定的，但是我当时有意避开了“请求”的正式定义。大家应当一直默认这里的“请求”都是指客户端发起的 HTTP 请求。其实在 Nginx 世界里有两种类型的“请求”，一种叫做**“主请求”（main request）**，而另一种则叫做**“子请求”（subrequest）**。我们先来介绍一下它们。
+Nginx 世界里有两种类型的“请求”，一种叫做**“主请求”（main request）**，而另一种则叫做**“子请求”（subrequest）**。
 
-**所谓“主请求”，就是由 HTTP 客户端从 Nginx 外部发起的请求**。我们前面见到的所有例子都只涉及到“主请求”，包括 [（二）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables02) 中那两个使用 [echo_exec](http://wiki.nginx.org/HttpEchoModule#echo_exec) 和 [rewrite](http://wiki.nginx.org/HttpRewriteModule#rewrite) 指令发起“内部跳转”的例子。
+**所谓“主请求”，就是由 HTTP 客户端从 Nginx 外部发起的请求**。我们前面见到的所有例子都只涉及到“主请求”，包括 [echo_exec](http://wiki.nginx.org/HttpEchoModule#echo_exec) 和 [rewrite](http://wiki.nginx.org/HttpRewriteModule#rewrite) 指令发起的“内部跳转”。
 
-而“子请求”则是由 Nginx 正在处理的请求在 Nginx 内部发起的一种级联请求。“子请求”在外观上很像 HTTP 请求，但实现上却和 HTTP 协议乃至网络通信一点儿关系都没有。它是 Nginx 内部的一种抽象调用，目的是为了方便用户把“主请求”的任务分解为多个较小粒度的“内部请求”，并发或串行地访问多个 `location` 接口，然后由这些 `location` 接口通力协作，共同完成整个“主请求”。当然，“子请求”的概念是相对的，任何一个“子请求”也可以再发起更多的“子子请求”，甚至可以玩递归调用（即自己调用自己）。当一个请求发起一个“子请求”的时候，按照 Nginx 的术语，习惯把前者称为后者的“父请求”（parent request）。值得一提的是，Apache 服务器中其实也有“子请求”的概念，所以来自 Apache 世界的读者对此应当不会感到陌生。
+而“子请求”则是由 Nginx 正在处理的请求在 Nginx 内部发起的一种级联请求。**“子请求”在外观上很像 HTTP 请求，但实现上却和 HTTP 协议乃至网络通信一点儿关系都没有**。它是 Nginx 内部的一种抽象调用，目的是为了方便用户把“主请求”的任务分解为多个较小粒度的“内部请求”，并发或串行地访问多个 `location` 接口，然后由这些 `location` 接口通力协作，共同完成整个“主请求”。当然，“子请求”的概念是相对的，任何一个“子请求”也可以再发起更多的“子子请求”，甚至可以玩递归调用（即自己调用自己）。当一个请求发起一个“子请求”的时候，按照 Nginx 的术语，习惯把前者称为后者的“父请求”（parent request）。值得一提的是，Apache 服务器中其实也有“子请求”的概念，所以来自 Apache 世界的读者对此应当不会感到陌生。
 
 下面就来看一个使用了“子请求”的例子：
 
@@ -491,7 +491,7 @@ location /bar {
 }
 ```
 
-这里在 `location /main` 中，通过第三方 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 模块的 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令分别发起到 `/foo` 和 `/bar` 这两个接口的 `GET` 类型的“子请求”。由 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 发起的“子请求”，其执行是按照配置书写的顺序串行处理的，即只有当 `/foo` 请求处理完毕之后，才会接着处理 `/bar` 请求。这两个“子请求”的输出会按执行顺序拼接起来，作为 `/main` 接口的最终输出：
+这里在 `location /main` 中，通过第三方 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 模块的 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令分别发起到 `/foo` 和 `/bar` 这两个接口的 `GET` 类型的“子请求”。由 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 发起的“子请求”，**其执行是按照配置书写的顺序串行处理的**，即只有当 `/foo` 请求处理完毕之后，才会接着处理 `/bar` 请求。这两个“子请求”的输出会按执行顺序拼接起来，作为 `/main` 接口的最终输出：
 
 ```bash
 $ curl 'http://localhost:8080/main'
@@ -556,7 +556,7 @@ main: sub
 
 对于上面这个例子，相信有读者会问：“为什么‘子请求’ `/sub` 的输出没有出现在最终的输出里呢？”答案很简单，那就是因为 `auth_request` 指令会自动忽略“子请求”的响应体，而只检查“子请求”的响应状态码。当状态码是 `2XX` 的时候，`auth_request` 指令会忽略“子请求”而让 Nginx 继续处理当前的请求，否则它就会立即中断当前（主）请求的执行，返回相应的出错页。在我们的例子中，`/sub` “子请求”只是使用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令作了一些输出，所以隐式地返回了指示正常的 `200` 状态码。
 
-如 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块这样父子请求共享一套 Nginx 变量的行为，虽然可以让父子请求之间的数据双向传递变得极为容易，但是对于足够复杂的配置，却也经常导致不少难于调试的诡异 bug. 因为用户时常不知道“父请求”的某个 Nginx 变量的值，其实已经在它的某个“子请求”中被意外修改了。诸如此类的因共享而导致的不好的“副作用”，让包括 [ngx_echo](http://wiki.nginx.org/HttpEchoModule)， [ngx_lua](http://wiki.nginx.org/HttpLuaModule)，以及 [ngx_srcache](http://wiki.nginx.org/HttpSRCacheModule) 在内的许多第三方模块都选择了禁用父子请求间的变量共享。
+如 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块这样父子请求共享一套 Nginx 变量的行为，虽然可以让父子请求之间的数据双向传递变得极为容易，但是对于足够复杂的配置，却也经常导致不少难于调试的诡异 bug. 因为用户时常不知道“父请求”的某个 Nginx 变量的值，其实已经在它的某个“子请求”中被意外修改了。诸如此类的因共享而导致的不好的“副作用”，包括 [ngx_echo](http://wiki.nginx.org/HttpEchoModule)， [ngx_lua](http://wiki.nginx.org/HttpLuaModule)，以及 [ngx_srcache](http://wiki.nginx.org/HttpSRCacheModule) 在内的许多第三方模块都选择了禁用父子请求间的变量共享。
 
 ### Nginx 变量漫谈（六）
 
@@ -576,68 +576,100 @@ location /sub {
 
 这里在 `/main` 接口中，先用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令输出当前请求的 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 变量的值，接着再用 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令发起子请求 `/sub`. 这里值得注意的是，我们在 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 语句中除了通过第一个参数指定“子请求”的 URI 之外，还提供了第二个参数，用以指定该“子请求”的 URL 参数串（即 `a=1&b=2`）。最后我们定义了 `/sub` 接口，在里面输出了一下 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 的值。请求 `/main` 接口的结果如下：
 
-```
-  $ curl 'http://localhost:8080/main?c=3'  main args: c=3  sub args: a=1&b=2
+```bash
+$ curl 'http://localhost:8080/main?c=3'  
+main args: c=3
+sub args: a=1&b=2
 ```
 
 显然，当 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 用在“主请求” `/main` 中时，输出的就是“主请求”的 URL 参数串，`c=3`；而当用在“子请求” `/sub` 中时，输出的则是“子请求”的参数串，`a=1&b=2`。这种行为正符合我们的直觉。
 
 与 [$args](http://wiki.nginx.org/HttpCoreModule#.24args) 类似，内建变量 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 用在“子请求”中时，其“取处理程序”也会正确返回当前“子请求”解析过的 URI:
 
-```
-  location /main {    echo "main uri: $uri";    echo_location /sub;  }  location /sub {    echo "sub uri: $uri";  }
+```nginx
+location /main {
+    echo "main uri: $uri";
+    echo_location /sub;
+}
+location /sub {
+    echo "sub uri: $uri";  
+}
 ```
 
 请求 `/main` 的结果是
 
-```
-  $ curl 'http://localhost:8080/main'  main uri: /main  sub uri: /sub
+```bash
+$ curl 'http://localhost:8080/main'
+main uri: /main
+sub uri: /sub
 ```
 
 这依然是我们所期望的。
 
-但不幸的是，并非所有的内建变量都作用于当前请求。少数内建变量只作用于“主请求”，比如由标准模块 [ngx_http_core](http://nginx.org/en/docs/http/ngx_http_core_module.html) 提供的内建变量 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method).
+但不幸的是，并非所有的内建变量都作用于当前请求。**少数内建变量只作用于“主请求”**，比如由标准模块 [ngx_http_core](http://nginx.org/en/docs/http/ngx_http_core_module.html) 提供的内建变量 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method).
 
-变量 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 在读取时，总是会得到“主请求”的请求方法，比如 `GET`、`POST` 之类。我们来测试一下：
+变量 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 在读取时，总是会得到“主请求”的请求方法，比如 `GET`、`POST` 之类：
 
+```nginx
+location /main {
+    echo "main method: $request_method";
+    echo_location /sub;
+}  
+location /sub {
+    echo "sub method: $request_method";  
+}
 ```
-  location /main {    echo "main method: $request_method";    echo_location /sub;  }  location /sub {    echo "sub method: $request_method";  }
+
+我们在 `/main` 接口里利用 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令发起一个到 `/sub` 接口的 `GET` “子请求”。我们现在利用 `curl` 命令行工具来发起一个到 `/main` 接口的 `POST` 请求：
+
+```bash
+$ curl --data hello 'http://localhost:8080/main'
+main method: POST
+sub method: POST
 ```
 
-在这个例子里，`/main` 和 `/sub` 接口都会分别输出 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 的值。同时，我们在 `/main` 接口里利用 [echo_location](http://wiki.nginx.org/HttpEchoModule#echo_location) 指令发起一个到 `/sub` 接口的 `GET` “子请求”。我们现在利用 `curl` 命令行工具来发起一个到 `/main` 接口的 `POST` 请求：
+这里我们利用 `curl` 程序的 `--data` 选项，指定 `hello` 作为我们的请求体数据，同时 `--data` 选项会自动让发送的请求使用 `POST` 请求方法。
 
-```
-  $ curl --data hello 'http://localhost:8080/main'  main method: POST  sub method: POST
-```
+有的读者可能觉得因为上例是先在“主请求”里读取（并输出） [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量，然后才发“子请求”的，所以这些读者可能认为这并不能排除 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 在进入子请求之前就已经把第一次读到的值给缓存住，从而影响到后续子请求中的输出结果。不过，这样的顾虑是多余的，因为我们前面在 [（五）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables05) 中也特别提到过，**缓存所依赖的变量的值容器，是与当前请求绑定的**，而由 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 模块发起的“子请求”都禁用了父子请求之间的变量共享，所以在上例中， [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 内建变量即使真的使用了值容器作为缓存（事实上它也没有），它也不可能影响到 `/sub` 子请求。
 
-这里我们利用 `curl` 程序的 `--data` 选项，指定 `hello` 作为我们的请求体数据，同时 `--data` 选项会自动让发送的请求使用 `POST` 请求方法。测试结果证明了我们先前的预言， [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量即使在 `GET` “子请求” `/sub` 中使用，得到的值依然是“主请求” `/main` 的请求方法，`POST`.
+我们不妨稍微修改一下刚才那个例子，将 `/main` 接口输出 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量的时间推迟到“子请求”执行完毕之后：
 
-有的读者可能觉得我们在这里下的结论有些草率，因为上例是先在“主请求”里读取（并输出） [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量，然后才发“子请求”的，所以这些读者可能认为这并不能排除 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 在进入子请求之前就已经把第一次读到的值给缓存住，从而影响到后续子请求中的输出结果。不过，这样的顾虑是多余的，因为我们前面在 [（五）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables05) 中也特别提到过，缓存所依赖的变量的值容器，是与当前请求绑定的，而由 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 模块发起的“子请求”都禁用了父子请求之间的变量共享，所以在上例中， [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 内建变量即使真的使用了值容器作为缓存（事实上它也没有），它也不可能影响到 `/sub` 子请求。
-
-为了进一步消除这部分读者的疑虑，我们不妨稍微修改一下刚才那个例子，将 `/main` 接口输出 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量的时间推迟到“子请求”执行完毕之后：
-
-```
-  location /main {    echo_location /sub;    echo "main method: $request_method";  }  location /sub {    echo "sub method: $request_method";  }
+```nginx
+location /main {
+    echo_location /sub;
+    echo "main method: $request_method";
+}  
+location /sub {
+    echo "sub method: $request_method";  
+}
 ```
 
 让我们重新测试一下：
 
+```bash
+ $ curl --data hello 'http://localhost:8080/main'
+ sub method: POST
+ main method: POST
 ```
-  $ curl --data hello 'http://localhost:8080/main'  sub method: POST  main method: POST
-```
-
-可以看到，再次以 `POST` 方法请求 `/main` 接口的结果与原先那个例子完全一致，除了父子请求的输出顺序颠倒了过来（因为我们在本例中交换了 `/main` 接口中那两条输出配置指令的先后次序）。
 
 由此可见，我们并不能通过标准的 [$request_method](http://wiki.nginx.org/HttpCoreModule#.24request_method) 变量取得“子请求”的请求方法。为了达到我们最初的目的，我们需要求助于第三方模块 [ngx_echo](http://wiki.nginx.org/HttpEchoModule) 提供的内建变量 [$echo_request_method](http://wiki.nginx.org/HttpEchoModule#.24echo_request_method)：
 
-```
-  location /main {    echo "main method: $echo_request_method";    echo_location /sub;  }  location /sub {    echo "sub method: $echo_request_method";  }
+```nginx
+location /main {
+    echo "main method: $echo_request_method";
+    echo_location /sub;
+}
+location /sub {
+    echo "sub method: $echo_request_method";  
+}
 ```
 
 此时的输出终于是我们想要的了：
 
-```
-  $ curl --data hello 'http://localhost:8080/main'  main method: POST  sub method: GET
+```bash
+$ curl --data hello 'http://localhost:8080/main'
+main method: POST
+sub method: GET
 ```
 
 我们看到，父子请求分别输出了它们各自不同的请求方法，`POST` 和 `GET`.
@@ -646,23 +678,38 @@ location /sub {
 
 如果真如前面那部分读者所担心的，内建变量的值缓存在共享变量的父子请求之间起了作用，这无疑是灾难性的。我们前面在 [（五）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables05) 中已经看到 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块发起的“子请求”是与其“父请求”共享一套变量的。下面是一个这样的可怕例子：
 
-```
-  map $uri $tag {    default   0;    /main    1;    /sub    2;  }  server {    listen 8080;    location /main {      auth_request /sub;      echo "main tag: $tag";    }    location /sub {      echo "sub tag: $tag";    }  }
+```nginx
+map $uri $tag {
+    default   0;
+    /main    1;
+    /sub    2;
+}  
+server {
+    listen 8080;
+    location /main {
+        auth_request /sub;
+        echo "main tag: $tag";
+    }    
+    location /sub {
+        echo "sub tag: $tag";
+    }
+}
 ```
 
 这里我们使用久违了的 [map](http://wiki.nginx.org/HttpMapModule#map) 指令来把内建变量 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 的值映射到用户变量 `$tag` 上。当 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 的值为 `/main` 时，则赋予 `$tag` 值 1，当 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 取值 `/sub` 时，则赋予 `$tag` 值 2，其他情况都赋 `0`. 接着，我们在 `/main` 接口中先用 [ngx_auth_request](http://mdounin.ru/hg/ngx_http_auth_request_module/) 模块的 `auth_request` 指令发起到 `/sub` 接口的子请求，然后再输出变量 `$tag` 的值。而在 `/sub` 接口中，我们直接输出变量 `$tag`. 猜猜看，如果我们访问接口 `/main`，将会得到什么样的输出呢？
 
-```
-  $ curl 'http://localhost:8080/main'  main tag: 2
+```bash
+ $ curl 'http://localhost:8080/main'  
+ main tag: 2
 ```
 
 咦？我们不是分明把 `/main` 这个值映射到 `1` 上的么？为什么实际输出的是 `/sub` 映射的结果 `2` 呢？
 
-其实道理很简单，因为我们的 `$tag` 变量在“子请求” `/sub` 中首先被读取，于是在那里计算出了值 `2`（因为 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 在那里取值 `/sub`，而根据 [map](http://wiki.nginx.org/HttpMapModule#map) 映射规则，`$tag` 应当取值 `2`），从此就被 `$tag` 的值容器给缓存住了。而 `auth_request` 发起的“子请求”又是与“父请求”共享一套变量的，于是当 Nginx 的执行流回到“父请求”输出 `$tag` 变量的值时，Nginx 就直接返回缓存住的结果 `2` 了。这样的结果确实太意外了。
+其实道理很简单，**因为我们的 `$tag` 变量在“子请求” `/sub` 中首先被读取，于是在那里计算出了值 `2`**（因为 [$uri](http://wiki.nginx.org/HttpCoreModule#.24uri) 在那里取值 `/sub`，而根据 [map](http://wiki.nginx.org/HttpMapModule#map) 映射规则，`$tag` 应当取值 `2`），**从此就被 `$tag` 的值容器给缓存住了**。而 `auth_request` 发起的“子请求”又是与“父请求”共享一套变量的，于是当 Nginx 的执行流回到“父请求”输出 `$tag` 变量的值时，Nginx 就直接返回缓存住的结果 `2` 了。这样的结果确实太意外了。
 
 从这个例子我们再次看到，父子请求间的变量共享，实在不是一个好主意。
 
-### Nginx 变量漫谈（七）
+### todo_Nginx 变量漫谈（七）
 
 在 [（一）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables01) 中我们提到过，Nginx 变量的值只有一种类型，那就是字符串，但是变量也有可能压根就不存在有意义的值。没有值的变量也有两种特殊的值：一种是“不合法”（invalid），另一种是“没找到”（not found）。
 
@@ -672,20 +719,27 @@ location /sub {
 
 虽然前面在 [（一）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables01) 中我们看到，由 [set](http://wiki.nginx.org/HttpRewriteModule#set) 指令创建的变量未初始化就用在“变量插值”中时，效果等同于空字符串，但那是因为 [set](http://wiki.nginx.org/HttpRewriteModule#set) 指令为它创建的变量自动注册了一个“取处理程序”，将“不合法”的变量值转换为空字符串。为了验证这一点，我们再重新看一下 [（一）](https://openresty.org/download/agentzh-nginx-tutorials-zhcn.html#01-NginxVariables01) 中讨论过的那个例子：
 
-```
-  location /foo {    echo "foo = [$foo]";  }  location /bar {    set $foo 32;    echo "foo = [$foo]";  }
+```nginx
+location /foo {
+    echo "foo = [$foo]";
+}
+location /bar {
+    set $foo 32;
+    echo "foo = [$foo]";  
+}
 ```
 
 这里为了简单起见，省略了原先写出的外围 `server` 配置块。在这个例子里，我们在 `/bar` 接口中用 [set](http://wiki.nginx.org/HttpRewriteModule#set) 指令隐式地创建了 `$foo` 变量这个名字，然后我们在 `/foo` 接口中不对 `$foo` 进行初始化就直接使用 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令输出。我们当时测试 `/foo` 接口的结果是
 
-```
-  $ curl 'http://localhost:8080/foo'  foo = []
+```bash
+$ curl 'http://localhost:8080/foo'  
+foo = []
 ```
 
 从输出上看，未初始化的 `$foo` 变量确实和空字符串的效果等同。但细心的读者当时应该就已经注意到，对于上面这个请求，Nginx 的错误日志文件（一般文件名叫做 `error.log`）中多出一行类似下面这样的警告：
 
 ```
-  [warn] 5765#0: *1 using uninitialized "foo" variable, ...
+[warn] 5765#0: *1 using uninitialized "foo" variable, ...
 ```
 
 这一行警告是谁输出的呢？答案是 [set](http://wiki.nginx.org/HttpRewriteModule#set) 指令为 `$foo` 注册的“取处理程序”。当 `/foo` 接口中的 [echo](http://wiki.nginx.org/HttpEchoModule#echo) 指令实际执行的时候，它会对它的参数 `"foo = $foo]"` 进行“变量插值”计算。于是，参数串中的 `$foo` 变量会被读取，而 Nginx 会首先检查其值容器里的取值，结果它看到了“不合法”这个特殊值，于是它这才决定继续调用 `$foo` 变量的“取处理程序”。于是 `$foo` 变量的“取处理程序”开始运行，它向 Nginx 的错误日志打印出上面那条警告消息，然后返回一个空字符串作为 `$foo` 的值，并从此缓存在 `$foo` 的值容器中。
@@ -697,7 +751,7 @@ location /sub {
 刚才提到，内建变量 [$arg_XXX](http://wiki.nginx.org/HttpCoreModule#.24arg_PARAMETER) 在请求 URL 参数 `XXX` 并不存在时会返回特殊值“找不到”，但遗憾的是在 Nginx 原生配置语言（我们估且这么称呼它）中是不能很方便地把它和空字符串区分开来的，比如：
 
 ```
-  location /test {    echo "name: [$arg_name]";  }
+location /test {    echo "name: [$arg_name]";  }
 ```
 
 这里我们输出 `$arg_name` 变量的值同时故意在请求中不提供 URL 参数 `name`:
